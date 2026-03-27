@@ -1,0 +1,1 @@
+I decided to use SRR1039508 (human airway RNA-seq, ~500MB) from NCBI SRA. 
