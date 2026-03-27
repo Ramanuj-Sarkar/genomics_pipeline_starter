@@ -1,0 +1,74 @@
+configfile: "config/config.yaml"
+
+import pandas as pd
+
+samples = pd.read_csv(config["samples"]).set_index("sample")
+
+rule all:
+    input:
+        expand("results/multiqc/multiqc_report.html"),
+        expand("results/aligned/{sample}.sorted.bam", sample=samples.index)
+
+rule fastqc_raw:
+    input:
+        r1 = lambda wc: samples.loc[wc.sample, "r1"],
+        r2 = lambda wc: samples.loc[wc.sample, "r2"]
+    output:
+        "results/fastqc/{sample}_R1_fastqc.html",
+        "results/fastqc/{sample}_R2_fastqc.html"
+    threads: config["params"]["threads"]
+    shell:
+        "fastqc {input.r1} {input.r2} -o results/fastqc/ -t {threads}"
+
+rule trimmomatic:
+    input:
+        r1 = lambda wc: samples.loc[wc.sample, "r1"],
+        r2 = lambda wc: samples.loc[wc.sample, "r2"]
+    output:
+        r1  = "results/trimmed/{sample}_R1_paired.fastq.gz",
+        r2  = "results/trimmed/{sample}_R2_paired.fastq.gz",
+        r1u = "results/trimmed/{sample}_R1_unpaired.fastq.gz",
+        r2u = "results/trimmed/{sample}_R2_unpaired.fastq.gz"
+    params:
+        adapters = config["trimmomatic_adapters"],
+        extra    = config["params"]["trimmomatic"]
+    threads: config["params"]["threads"]
+    shell:
+        """
+        trimmomatic PE -threads {threads} \
+            {input.r1} {input.r2} \
+            {output.r1} {output.r1u} \
+            {output.r2} {output.r2u} \
+            ILLUMINACLIP:{params.adapters}:2:30:10 \
+            {params.extra}
+        """
+
+rule hisat2_align:
+    input:
+        r1 = "results/trimmed/{sample}_R1_paired.fastq.gz",
+        r2 = "results/trimmed/{sample}_R2_paired.fastq.gz"
+    output:
+        bam = "results/aligned/{sample}.bam"
+    params:
+        index = config["genome_index"],
+        extra = config["params"]["hisat2"]
+    threads: config["params"]["threads"]
+    shell:
+        """
+        hisat2 {params.extra} -p {threads} \
+            -x {params.index} \
+            -1 {input.r1} -2 {input.r2} | \
+        samtools view -bS - > {output.bam}
+        """
+
+rule samtools_sort:
+    input:  "results/aligned/{sample}.bam"
+    output: "results/aligned/{sample}.sorted.bam"
+    shell:  "samtools sort {input} -o {output} && samtools index {output}"
+
+rule multiqc:
+    input:
+        expand("results/fastqc/{sample}_R1_fastqc.html", sample=samples.index),
+        expand("results/aligned/{sample}.sorted.bam",    sample=samples.index)
+    output: "results/multiqc/multiqc_report.html"
+    shell:  "multiqc results/ -o results/multiqc/"

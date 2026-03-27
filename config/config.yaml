@@ -1,0 +1,9 @@
+samples: "resources/sample_sheet.csv"
+genome_index: "resources/genome/hisat2_index"
+trimmomatic_adapters: "resources/adapters/TruSeq3-PE.fa"
+
+params:
+  fastqc: ""
+  trimmomatic: "LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36"
+  hisat2: "--dta --no-spliced-alignment"
+  threads: 4

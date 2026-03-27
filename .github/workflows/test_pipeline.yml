@@ -1,0 +1,21 @@
+name: Test Pipeline (Dry Run)
+
+on: [push, pull_request]
+
+jobs:
+  snakemake-dryrun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          environment-file: envs/genomics.yaml
+          activate-environment: genomics-pipeline
+
+      - name: Snakemake dry run
+        run: |
+          snakemake --snakefile workflow/Snakefile \
+                    --configfile config/config.yaml \
+                    --dry-run
