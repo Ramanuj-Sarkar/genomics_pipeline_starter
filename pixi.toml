@@ -1,0 +1,11 @@
+[workspace]
+authors = ["Ramanuj Sarkar <ramanuj.sarkar.ge@gmail.com>"]
+channels = ["conda-forge", "bioconda"]
+name = "genomics_pipeline_starter"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+snakemake = ">=9.19.0,<10"
